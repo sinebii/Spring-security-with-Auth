@@ -9,4 +9,6 @@ import javax.servlet.http.HttpServletRequest;
 public interface BaseUserService {
     CreateUserRes createNewUser(CreateUserReq createUserReq, HttpServletRequest request);
     void saveVerificationTokenForUser(String token, BaseUser baseUser);
+
+    String validateToken(String token);
 }

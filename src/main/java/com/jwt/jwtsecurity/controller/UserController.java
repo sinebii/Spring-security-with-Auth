@@ -8,10 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -25,5 +22,9 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<CreateUserRes> createNewUser(@RequestBody CreateUserReq createUserReq, final HttpServletRequest request){
         return new ResponseEntity<>(baseUserService.createNewUser(createUserReq,request), HttpStatus.CREATED);
+    }
+    @GetMapping("/verifyRegistration/{token}")
+    public ResponseEntity<String> verifyToken(@PathVariable(name = "token") String token){
+        return new ResponseEntity<>(baseUserService.validateToken(token),HttpStatus.OK);
     }
 }

@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Calendar;
 
 @Service
 public class BaseUserServiceImpl implements BaseUserService {
@@ -29,6 +30,7 @@ public class BaseUserServiceImpl implements BaseUserService {
     private ApplicationEventPublisher publisher;
     @Autowired
     private VerificationTokenRepository verificationTokenRepository;
+
 
 
     @Override
@@ -60,5 +62,20 @@ public class BaseUserServiceImpl implements BaseUserService {
     public void saveVerificationTokenForUser(String token, BaseUser baseUser) {
         VerificationToken verificationToken = new VerificationToken(baseUser,token);
         verificationTokenRepository.save(verificationToken);
+    }
+
+    @Override
+    public String validateToken(String token) {
+        VerificationToken verificationToken = verificationTokenRepository.findByToken(token);
+        if(verificationToken ==null)throw new UserException("Invalid token");
+        BaseUser baseUser = verificationToken.getBaseUser();
+        Calendar calendar = Calendar.getInstance();
+        if(verificationToken.getExpirationTime().getTime()-calendar.getTime().getTime() <=0){
+            verificationTokenRepository.delete(verificationToken);
+            throw new UserException("Token is expired");
+        }
+        baseUser.setEnabled(true);
+        baseUserRepository.save(baseUser);
+        return "Account has been verified";
     }
 }
