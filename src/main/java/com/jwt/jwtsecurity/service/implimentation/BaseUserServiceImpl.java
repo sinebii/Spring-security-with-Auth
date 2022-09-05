@@ -1,15 +1,21 @@
 package com.jwt.jwtsecurity.service.implimentation;
 
 import com.jwt.jwtsecurity.entity.BaseUser;
+import com.jwt.jwtsecurity.entity.VerificationToken;
+import com.jwt.jwtsecurity.event.RegistrationCompleteEvent;
 import com.jwt.jwtsecurity.exception.UserException;
 import com.jwt.jwtsecurity.payload.request.CreateUserReq;
 import com.jwt.jwtsecurity.payload.response.CreateUserRes;
 import com.jwt.jwtsecurity.repository.BaseUserRepository;
+import com.jwt.jwtsecurity.repository.VerificationTokenRepository;
 import com.jwt.jwtsecurity.service.BaseUserService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import javax.servlet.http.HttpServletRequest;
 
 @Service
 public class BaseUserServiceImpl implements BaseUserService {
@@ -19,9 +25,16 @@ public class BaseUserServiceImpl implements BaseUserService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private ModelMapper mapper;
-    @Override
-    public CreateUserRes createNewUser(CreateUserReq createUserReq) {
+    @Autowired
+    private ApplicationEventPublisher publisher;
+    @Autowired
+    private VerificationTokenRepository verificationTokenRepository;
 
+
+    @Override
+    public CreateUserRes createNewUser(CreateUserReq createUserReq, HttpServletRequest request) {
+
+        if(!createUserReq.getPassword().equals(createUserReq.getRePassword())) throw new UserException("Passwords do not match");
         if(baseUserRepository.findByEmail(createUserReq.getEmail())!=null) throw new UserException("User with "+createUserReq.getEmail()+ " already exist");
         BaseUser user = BaseUser.builder()
                 .firstName(createUserReq.getFirstName())
@@ -31,6 +44,21 @@ public class BaseUserServiceImpl implements BaseUserService {
                 .role("USER")
                 .build();
         BaseUser saveUser =  baseUserRepository.save(user);
+        publisher.publishEvent(new RegistrationCompleteEvent(saveUser,applicationUrl(request)));
         return mapper.map(saveUser, CreateUserRes.class);
+    }
+
+    private String applicationUrl(HttpServletRequest request) {
+        return "http://"+
+                request.getServerName()+
+                ":"+
+                request.getServerPort()+
+                request.getContextPath();
+    }
+
+    @Override
+    public void saveVerificationTokenForUser(String token, BaseUser baseUser) {
+        VerificationToken verificationToken = new VerificationToken(baseUser,token);
+        verificationTokenRepository.save(verificationToken);
     }
 }
